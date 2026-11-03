@@ -1,25 +1,68 @@
-import Pedido, { calcularTotal, marcarEntregado } from "./pedidos.js";
-import { mostrarPedidos, mostrarTotal } from "./ui.js";
+import Pedido, {
+  calcularSubtotal,
+  calcularTotal,
+  filtrarPedidos,
+  agregarPedido,
+  marcarEntregado,
+  eliminarPedido,
+  validarPedido,
+} from "./pedidos.js";
+import {
+  dom,
+  leerFormulario,
+  limpiarFormulario,
+  mostrarMensaje,
+  mostrarPedidos,
+  mostrarTotales,
+} from "./ui.js";
 
-let pedidos = [
-  new Pedido({ producto: "Café", precio: 6, cantidad: 2, cliente: { nombre: "Ana" } }),
-  new Pedido({ producto: "Croissant", precio: 4.5, cantidad: 0 }),
-  new Pedido({ producto: "Jugo", precio: 8 }),
-];
+let pedidos = [];
+let sigId = 1;
 
-const lista = document.querySelector("#lista-pedidos");
-const total = document.querySelector("#total");
-
-const pintar = () => {
-  mostrarPedidos(pedidos, lista);
-  mostrarTotal(calcularTotal(pedidos), total);
+const render = () => {
+  mostrarPedidos(filtrarPedidos(pedidos, dom.filtro.value));
+  mostrarTotales(calcularSubtotal(pedidos), calcularTotal(pedidos));
 };
 
-lista.addEventListener("click", (e) => {
-  const indice = e.target.dataset.indice;
-  if (indice === undefined) return;
-  pedidos = marcarEntregado(pedidos, Number(indice));
-  pintar();
+dom.form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const datos = leerFormulario();
+  const errores = validarPedido(datos);
+
+  if (errores.length > 0) {
+    mostrarMensaje(errores.join(" "));
+    return;
+  }
+
+  const nuevo = new Pedido({
+    id: sigId,
+    producto: datos.producto,
+    precio: Number(datos.precio),
+    cantidad: Number(datos.cantidad),
+  });
+  sigId += 1;
+  pedidos = agregarPedido(pedidos, nuevo);
+  mostrarMensaje("Pedido agregado.");
+  limpiarFormulario();
+  render();
 });
 
-pintar();
+dom.filtro.addEventListener("change", render);
+
+dom.lista.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-id]");
+  if (btn === null) {
+    return;
+  }
+  const id = Number(btn.dataset.id);
+  const { accion } = btn.dataset;
+
+  if (accion === "entregar") {
+    pedidos = marcarEntregado(pedidos, id);
+  } else if (accion === "eliminar") {
+    pedidos = eliminarPedido(pedidos, id);
+  }
+  render();
+});
+
+render();
