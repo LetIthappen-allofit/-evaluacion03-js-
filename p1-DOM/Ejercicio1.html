@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1</title>
+</head>
+<body>
+
+<h1>CaféTec - Pedidos del mostrador</h1>
+
+<form id="form-pedido">
+  <input id="producto" placeholder="Producto">
+  <input id="precio" type="number" step="0.10" placeholder="Precio S/">
+  <input id="cantidad" type="number" min="0" placeholder="Cantidad">
+  <button type="submit">Agregar</button>
+</form>
+<p id="mensaje"></p>
+<select id="filtro">
+  <option value="todos">Todos</option>
+  <option value="pendiente">Pendientes</option>
+  <option value="entregado">Entregados</option>
+</select>
+<ul id="lista-pedidos"></ul>
+<p id="total"></p>
+
+<script>
+var pedidos = [];
+var sigId = 1;
+
+var form = document.getElementById("form-pedido");
+var inpProducto = document.getElementById("producto");
+var inpPrecio = document.getElementById("precio");
+var inpCantidad = document.getElementById("cantidad");
+var mensaje = document.getElementById("mensaje");
+var filtro = document.getElementById("filtro");
+var lista = document.getElementById("lista-pedidos");
+var total = document.getElementById("total");
+
+function crearPedido(producto, precio, cantidad) {
+  var p = {
+    id: sigId,
+    producto: producto,
+    precio: precio,
+    cantidad: cantidad,
+    estado: "pendiente",
+    subtotal: function () {
+      return this.precio * this.cantidad;
+    },
+    marcarEntregado: function () {
+      this.estado = "entregado";
+    }
+  };
+  sigId = sigId + 1;
+  return p;
+}
+
+function buscarIndice(id) {
+  var i = 0;
+  while (i < pedidos.length) {
+    if (pedidos[i].id === id) {
+      return i;
+    }
+    i = i + 1;
+  }
+  return -1;
+}
+
+function crearBoton(texto, accion, id) {
+  var b = document.createElement("button");
+  b.textContent = texto;
+  b.dataset.accion = accion;
+  b.dataset.id = id;
+  return b;
+}
+
+function render() {
+  lista.textContent = "";
+  var i = 0;
+  var suma = 0;
+  while (i < pedidos.length) {
+    var p = pedidos[i];
+    suma = suma + p.subtotal();
+    if (filtro.value === "todos" || filtro.value === p.estado) {
+      var li = document.createElement("li");
+      var span = document.createElement("span");
+      span.textContent = p.producto + " | " + p.cantidad + " x S/ " + p.precio.toFixed(2) +
+        " = S/ " + p.subtotal().toFixed(2) + " | " + p.estado + " ";
+      li.appendChild(span);
+      if (p.estado === "pendiente") {
+        li.appendChild(crearBoton("Entregar", "entregar", p.id));
+      }
+      li.appendChild(crearBoton("Eliminar", "eliminar", p.id));
+      lista.appendChild(li);
+    }
+    i = i + 1;
+  }
+  total.textContent = "Total a cobrar: S/ " + suma.toFixed(2);
+}
+
+
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+  var producto = inpProducto.value.trim();
+  var precio = Number(inpPrecio.value);
+  var cantidad = Number(inpCantidad.value);
+  var errores = [];
+
+  if (producto === "") {
+    errores.push("El producto no puede estar vacío.");
+  }
+  if (inpPrecio.value === "" || precio <= 0) {
+    errores.push("El precio debe ser mayor a 0.");
+  }
+  if (inpCantidad.value === "" || cantidad < 0) {
+    errores.push("La cantidad no puede estar vacía ni ser negativa.");
+  }
+
+  if (errores.length > 0) {
+    mensaje.textContent = errores.join(" ");
+    return;
+  }
+
+  pedidos.push(crearPedido(producto, precio, cantidad));
+  mensaje.textContent = "Pedido agregado.";
+  form.reset();
+  inpProducto.focus();
+  render();
+});
+
+filtro.addEventListener("change", function () {
+  render();
+});
+
+lista.addEventListener("click", function (e) {
+  var btn = e.target.closest("button[data-id]");
+  if (btn === null) {
+    return;
+  }
+  var id = Number(btn.dataset.id);
+  var pos = buscarIndice(id);
+  if (pos === -1) {
+    return;
+  }
+  if (btn.dataset.accion === "entregar") {
+    pedidos[pos].marcarEntregado();
+  } else if (btn.dataset.accion === "eliminar") {
+    pedidos.splice(pos, 1);
+  }
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
